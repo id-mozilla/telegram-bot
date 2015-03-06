@@ -325,3 +325,10 @@ function table.map_length(t)
     return c
 end
 
+-- http://stackoverflow.com/a/656232
+-- put array into set type variable
+function Set (list)
+  local set = {}
+  for _, l in ipairs(list) do set[l] = true end
+  return set
+end
