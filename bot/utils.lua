@@ -33,9 +33,15 @@ function string:split(sep)
   return fields
 end
 
--- Removes spaces
+-- DEPRECATED
 function string.trim(s)
+  print("string.trim(s) is DEPRECATED use string:trim() instead")
   return s:gsub("^%s*(.-)%s*$", "%1")
+end
+
+-- Removes spaces
+function string:trim()
+  return self:gsub("^%s*(.-)%s*$", "%1")
 end
 
 function get_http_file_name(url, headers)
@@ -46,7 +52,10 @@ function get_http_file_name(url, headers)
   content_type = content_type or headers["Content-type"]
   content_type = content_type or h["Content-Type"]
   
-  local extension = mimetype.get_mime_extension(content_type)
+  local extension = nil
+  if content_type then
+    extension = mimetype.get_mime_extension(content_type)
+  end
   if extension then
     file_name = file_name.."."..extension
   end
@@ -66,9 +75,24 @@ function download_to_file(url, file_name)
     redirect = true
   }
 
-  local one, c, h = http.request(options)
+  -- nil, code, headers, status
+  local response = nil
 
-  local file_name = get_http_file_name(url, h)
+  if url:starts('https') then
+    options.redirect = false
+    response = {https.request(options)}
+  else
+    response = {http.request(options)}
+  end
+
+  local code = response[2]
+  local headers = response[3]
+  local status = response[4]
+
+  if code ~= 200 then return nil end
+
+  file_name = file_name or get_http_file_name(url, headers)
+    
   local file_path = "/tmp/"..file_name
   print("Saved to: "..file_path)
 
@@ -83,14 +107,6 @@ end
 function vardump(value, depth, key)
   local linePrefix = ""
   local spaces = ""
-  
-  -- print("++++++++++ --> " .. _config.debug)
-
-  if _config.debug ~= nil then
-    if _config.debug == false then
-      return ""
-    end
-  end
   
   if key ~= nil then
     linePrefix = "["..key.."] = "
@@ -143,24 +159,25 @@ function run_command(str)
   return result
 end
 
+-- User has priviledges
 function is_sudo(msg)
-   local var = false
-   -- Check users id in config 
-   for v,user in pairs(_config.sudo_users) do 
-      if user == msg.from.id then 
-         var = true 
-      end
-   end
-   return var
+  local var = false
+  -- Check users id in config 
+  for v,user in pairs(_config.sudo_users) do 
+    if user == msg.from.id then 
+      var = true 
+    end
+  end
+  return var
 end
 
 -- Returns the name of the sender
 function get_name(msg)
-   local name = msg.from.first_name
-   if name == nil then
-      name = msg.from.id
-   end
-   return name
+  local name = msg.from.first_name
+  if name == nil then
+    name = msg.from.id
+  end
+  return name
 end
 
 -- Returns at table of lua files inside plugins
@@ -202,9 +219,21 @@ function string:isempty()
   return self == nil or self == ''
 end
 
--- Returns true if String starts with Start
+-- Retruns true if the string is blank
+function string:isblank()
+  self = self:trim()
+  return self:isempty()
+end
+
+-- DEPRECATED!!!!!
 function string.starts(String, Start)
-   return Start == string.sub(String,1,string.len(Start))
+  print("string.starts(String, Start) is DEPRECATED use string:starts(text) instead")
+  return Start == string.sub(String,1,string.len(Start))
+end
+
+-- Returns true if String starts with Start
+function string:starts(text)
+  return text == string.sub(self,1,string.len(text))
 end
 
 -- Send image to user and delete it when finished.
@@ -222,9 +251,18 @@ end
 -- Download the image and send to receiver, it will be deleted.
 -- cb_function and cb_extra are optionals callback
 function send_photo_from_url(receiver, url, cb_function, cb_extra)
+  -- If callback not provided
+  cb_function = cb_function or ok_cb
+  cb_extra = cb_extra or false
+  
   local file_path = download_to_file(url, false)
-  print("File path: "..file_path)
-  _send_photo(receiver, file_path, cb_function, cb_extra)
+  if not file_path then -- Error
+    local text = 'Error downloading the image'
+    send_msg(receiver, text, cb_function, cb_extra)
+  else
+    print("File path: "..file_path)
+    _send_photo(receiver, file_path, cb_function, cb_extra)
+  end
 end
 
 -- Same as send_photo_from_url but as callback function
@@ -233,8 +271,13 @@ function send_photo_from_url_callback(cb_extra, success, result)
   local url = cb_extra.url
   
   local file_path = download_to_file(url, false)
-  print("File path: "..file_path)
-  _send_photo(receiver, file_path, cb_function, cb_extra)
+  if not file_path then -- Error
+    local text = 'Error downloading the image'
+    send_msg(receiver, text, ok_cb, false)
+  else
+    print("File path: "..file_path)
+    _send_photo(receiver, file_path, ok_cb, false)
+  end
 end
 
 --  Send multimple images asynchronous.
