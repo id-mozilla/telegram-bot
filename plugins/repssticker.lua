@@ -5,17 +5,7 @@ function run(msg, matches)
 	local response = ""
 	local rootpath = _config.repssticker.sticker_path
 
-	local sticker_pairs = {
-		["yourhighness"]="briankinghighness",
-		["broom"]="eliobroom",
-		["plane"]="elioplane",
-		["oneminute"]="rosanaoneminute",
-		["seriously"]="yofieseriously",
-		["what"]="yofiewhat",
-		["mbaker"]="mitchellbaker",
-		["mypeopleneedme"]="mozillaman",
-		["kumi"]="kumi"
-	}
+	local sticker_pairs = _config.repssticker.stickers
 
 	print (" matched: " .. sticker_pairs[ matches[1] ])
 
