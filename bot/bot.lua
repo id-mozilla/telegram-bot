@@ -35,9 +35,11 @@ end
 
 function msg_valid(msg)
   -- Dont process outgoing messages
-  if msg.out then
-    print("Not valid, msg from us")
-    return false
+  if _config.allow_self == false then
+    if msg.out then
+      print("Not valid, msg from us")
+      return false
+    end
   end
   if msg.date < now then
     print("Not valid, old msg")
